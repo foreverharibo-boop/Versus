@@ -1,0 +1,577 @@
+/* === Versus FAB === */
+#versus-fab {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #534AB7;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    text-shadow: none;
+    user-select: none;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+    letter-spacing: -0.5px;
+    z-index: 1000;
+}
+#versus-fab:active {
+    transform: scale(0.92);
+}
+
+/* === Backdrop === */
+#versus-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 99998;
+}
+#versus-backdrop.open {
+    display: block;
+}
+
+/* === Panel === */
+#versus-panel {
+    display: none;
+    position: fixed;
+    z-index: 99999;
+    background: var(--SmartThemeBlurTintColor, #fff);
+    overflow-y: auto;
+    overflow-x: hidden;
+    text-shadow: none;
+    -webkit-overflow-scrolling: touch;
+    /* Mobile: full width bottom sheet */
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-height: 85vh;
+    border-radius: 16px 16px 0 0;
+    padding: 0;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.15);
+}
+#versus-panel.open {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Desktop: centered modal */
+@media (min-width: 769px) {
+    #versus-panel {
+        bottom: auto;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 640px;
+        max-height: 80vh;
+        border-radius: 16px;
+        box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    }
+}
+
+/* === Header === */
+.versus-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid rgba(128,128,128,0.15);
+    flex-shrink: 0;
+}
+.versus-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--SmartThemeBodyColor, #222);
+    text-shadow: none;
+}
+.versus-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #534AB7;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    text-shadow: none;
+}
+.versus-close {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--SmartThemeBodyColor, #666);
+    text-shadow: none;
+    transition: background 0.15s;
+}
+.versus-close:hover {
+    background: rgba(128,128,128,0.15);
+}
+
+/* === Body === */
+.versus-body {
+    padding: 16px 20px 24px;
+    overflow-y: auto;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.versus-setup,
+.versus-result,
+.versus-history {
+    width: 100%;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+/* === Preset Selection === */
+.versus-preset-box {
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 8px;
+}
+.versus-preset-box.versus-a {
+    border: 2px solid #534AB7;
+    background: rgba(83, 74, 183, 0.06);
+}
+.versus-preset-box.versus-b {
+    border: 2px solid #1D9E75;
+    background: rgba(29, 158, 117, 0.06);
+}
+.versus-preset-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor, #555);
+    text-shadow: none;
+}
+.versus-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    text-shadow: none;
+}
+.versus-badge-a { background: #534AB7; }
+.versus-badge-b { background: #1D9E75; }
+
+.versus-select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(128,128,128,0.25);
+    background: var(--SmartThemeBlurTintColor, #fff);
+    color: var(--SmartThemeBodyColor, #222);
+    font-size: 14px;
+    font-weight: 500;
+    text-shadow: none;
+    outline: none;
+    cursor: pointer;
+    appearance: auto;
+}
+.versus-select:focus {
+    border-color: #534AB7;
+}
+
+/* === VS Divider === */
+.versus-vs-divider {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--SmartThemeBodyColor, #999);
+    padding: 6px 0;
+    text-shadow: none;
+    opacity: 0.5;
+}
+
+/* === Input === */
+.versus-input-section {
+    margin: 12px 0;
+}
+.versus-textarea {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(128,128,128,0.25);
+    background: var(--SmartThemeBlurTintColor, #fff);
+    color: var(--SmartThemeBodyColor, #222);
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 70px;
+    text-shadow: none;
+    outline: none;
+    box-sizing: border-box;
+}
+.versus-textarea:focus {
+    border-color: #534AB7;
+}
+.versus-textarea::placeholder {
+    color: rgba(128,128,128,0.5);
+    text-shadow: none;
+}
+.versus-btn-lastmsg {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(128,128,128,0.2);
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #666);
+    font-size: 13px;
+    cursor: pointer;
+    text-shadow: none;
+    text-align: center;
+    transition: background 0.15s;
+}
+.versus-btn-lastmsg:hover {
+    background: rgba(128,128,128,0.08);
+}
+
+/* === Start Button === */
+.versus-btn-start {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: #534AB7;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    text-shadow: none;
+    text-align: center;
+    transition: opacity 0.15s, transform 0.1s;
+}
+.versus-btn-start:active {
+    transform: scale(0.98);
+}
+.versus-btn-start:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* === History Button (setup) === */
+.versus-btn-history {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(128,128,128,0.2);
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #666);
+    font-size: 14px;
+    cursor: pointer;
+    text-shadow: none;
+    text-align: center;
+    transition: background 0.15s;
+}
+.versus-btn-history:hover {
+    background: rgba(128,128,128,0.08);
+}
+
+/* === Result View === */
+.versus-result-header {
+    text-align: center;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--SmartThemeBodyColor, #222);
+    margin-bottom: 14px;
+    text-shadow: none;
+}
+.versus-result-input {
+    background: rgba(128,128,128,0.07);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--SmartThemeBodyColor, #444);
+    text-shadow: none;
+    word-break: break-word;
+}
+.versus-result-input-label {
+    font-weight: 600;
+    margin-right: 6px;
+}
+.versus-result-input-text {
+    opacity: 0.8;
+}
+
+/* Desktop: side by side */
+@media (min-width: 769px) {
+    .versus-result {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .versus-result-header,
+    .versus-result-input,
+    .versus-result-actions,
+    .versus-btn-back {
+        width: 100%;
+        flex-shrink: 0;
+    }
+    .versus-result-card {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.versus-result-card {
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    word-break: break-word;
+}
+.versus-result-card.versus-a {
+    border: 2px solid #534AB7;
+    background: rgba(83, 74, 183, 0.05);
+}
+.versus-result-card.versus-b {
+    border: 2px solid #1D9E75;
+    background: rgba(29, 158, 117, 0.05);
+}
+.versus-result-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+.versus-result-preset-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor, #333);
+    text-shadow: none;
+}
+.versus-result-card-body {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--SmartThemeBodyColor, #333);
+    white-space: pre-wrap;
+    text-shadow: none;
+    margin-bottom: 10px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.versus-result-meta {
+    display: flex;
+    gap: 14px;
+    border-top: 1px solid rgba(128,128,128,0.15);
+    padding-top: 8px;
+}
+.versus-meta-item {
+    font-size: 12px;
+    font-weight: 600;
+    text-shadow: none;
+}
+.versus-meta-a { color: #534AB7; }
+.versus-meta-b { color: #1D9E75; }
+
+/* === Result Actions === */
+.versus-result-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 8px 0;
+}
+.versus-btn-action {
+    padding: 10px;
+    border-radius: 10px;
+    border: 1.5px solid rgba(128,128,128,0.2);
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #555);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    text-shadow: none;
+    text-align: center;
+    transition: background 0.15s;
+}
+.versus-btn-action:hover {
+    background: rgba(128,128,128,0.08);
+}
+.versus-btn-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.versus-btn-back {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 6px;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    color: var(--SmartThemeBodyColor, #888);
+    font-size: 13px;
+    cursor: pointer;
+    text-shadow: none;
+    text-align: center;
+}
+
+/* === History === */
+.versus-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.versus-history-item {
+    border: 1.5px solid rgba(128,128,128,0.18);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: rgba(128,128,128,0.03);
+}
+.versus-history-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+.versus-history-date {
+    font-size: 12px;
+    color: var(--SmartThemeBodyColor, #999);
+    opacity: 0.65;
+    text-shadow: none;
+}
+.versus-history-char {
+    font-size: 11px;
+    color: var(--SmartThemeBodyColor, #999);
+    opacity: 0.5;
+    text-shadow: none;
+}
+.versus-history-item-presets {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+.versus-history-preset-tag {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 6px;
+    text-shadow: none;
+}
+.versus-tag-a {
+    background: rgba(83, 74, 183, 0.12);
+    color: #534AB7;
+}
+.versus-tag-b {
+    background: rgba(29, 158, 117, 0.12);
+    color: #1D9E75;
+}
+.versus-history-vs {
+    font-size: 11px;
+    color: var(--SmartThemeBodyColor, #aaa);
+    opacity: 0.5;
+    text-shadow: none;
+}
+.versus-history-input {
+    font-size: 12px;
+    color: var(--SmartThemeBodyColor, #666);
+    opacity: 0.7;
+    text-shadow: none;
+    margin-bottom: 8px;
+}
+.versus-history-actions {
+    display: flex;
+    gap: 8px;
+}
+.versus-btn-view-detail,
+.versus-btn-delete-item {
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(128,128,128,0.2);
+    background: transparent;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #666);
+    text-shadow: none;
+    transition: background 0.15s;
+}
+.versus-btn-view-detail:hover,
+.versus-btn-delete-item:hover {
+    background: rgba(128,128,128,0.1);
+}
+.versus-btn-delete-item {
+    color: #E24B4A;
+    border-color: rgba(226, 75, 74, 0.25);
+}
+
+.versus-history-empty {
+    text-align: center;
+    padding: 30px 0;
+    font-size: 14px;
+    color: var(--SmartThemeBodyColor, #999);
+    opacity: 0.5;
+    text-shadow: none;
+}
+
+/* === Toast === */
+.versus-toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #333;
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 100000;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    text-shadow: none;
+    white-space: nowrap;
+    pointer-events: none;
+}
+.versus-toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* === Mobile center fix === */
+@media (pointer: coarse) {
+    .versus-body {
+        align-items: center;
+        text-align: left;
+    }
+    .versus-setup,
+    .versus-result,
+    .versus-history {
+        width: 100%;
+        max-width: 100%;
+    }
+    .versus-result-card-body {
+        max-height: 250px;
+    }
+}
