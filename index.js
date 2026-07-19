@@ -86,10 +86,13 @@ function getCurrentProfileValue() {
 
 async function switchProfile(profileValue) {
     const sel = getProfileSelector();
-    if (!sel || !profileValue || sel.value === profileValue) return;
+    if (!sel || profileValue == null) return;
+    if (sel.value === profileValue) return;
     sel.value = profileValue;
     sel.dispatchEvent(new Event('change'));
-    await new Promise(r => setTimeout(r, 800));
+    await new Promise(r => setTimeout(r, 500));
+    document.querySelector('#update_connection_profile')?.click();
+    await new Promise(r => setTimeout(r, 500));
 }
 
 function getCurrentCharName() {
@@ -469,7 +472,7 @@ async function startComparison() {
 
         if (abortRequested) {
             await switchPreset(originalPreset);
-            if (originalProfile) await switchProfile(originalProfile);
+            await switchProfile(originalProfile);
             showToast('비교가 중지되었습니다.');
             renderSetup();
             return;
@@ -488,7 +491,7 @@ async function startComparison() {
 
         if (abortRequested) {
             await switchPreset(originalPreset);
-            if (originalProfile) await switchProfile(originalProfile);
+            await switchProfile(originalProfile);
             showToast('비교가 중지되었습니다.');
             renderSetup();
             return;
@@ -496,7 +499,7 @@ async function startComparison() {
 
         // Restore
         await switchPreset(originalPreset);
-        if (originalProfile) await switchProfile(originalProfile);
+        await switchProfile(originalProfile);
 
         const labelA = profileAName ? `${presetAName} · ${profileAName}` : presetAName;
         const labelB = profileBName ? `${presetBName} · ${profileBName}` : presetBName;
@@ -518,7 +521,7 @@ async function startComparison() {
             showToast('생성 오류: ' + (err.message || err));
         }
         await switchPreset(originalPreset);
-        if (originalProfile) await switchProfile(originalProfile);
+        await switchProfile(originalProfile);
         renderSetup();
     } finally {
         stopFetchIntercept();
