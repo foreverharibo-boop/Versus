@@ -255,6 +255,20 @@
     color: var(--SmartThemeBodyColor, #333) !important;
     text-shadow: none !important;
 }
+.vs-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.1));
+    padding-top: 8px;
+}
+.vs-card-foot .vs-card-meta {
+    border-top: none;
+    padding-top: 0;
+}
+.vs-translate {
+    white-space: nowrap;
+}
 
 /* ── History ── */
 .vs-history-row {

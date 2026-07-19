@@ -303,10 +303,13 @@ function renderResult(data) {
                         <span class="vs-slot-label">A</span>
                         <span class="vs-card-name">${esc(data.presetAName)}</span>
                     </div>
-                    <div class="vs-card-body">${esc(data.responseA)}</div>
-                    <div class="vs-card-meta">
-                        <span>${data.tokensA} tok</span>
-                        <span>${data.timeA}s</span>
+                    <div class="vs-card-body" id="vs-body-a">${esc(data.responseA)}</div>
+                    <div class="vs-card-foot">
+                        <div class="vs-card-meta">
+                            <span>${data.tokensA} tok</span>
+                            <span>${data.timeA}s</span>
+                        </div>
+                        <button class="vs-btn-tiny vs-translate" data-target="a">번역</button>
                     </div>
                 </div>
                 <div class="vs-card">
@@ -314,10 +317,13 @@ function renderResult(data) {
                         <span class="vs-slot-label">B</span>
                         <span class="vs-card-name">${esc(data.presetBName)}</span>
                     </div>
-                    <div class="vs-card-body">${esc(data.responseBText)}</div>
-                    <div class="vs-card-meta">
-                        <span>${data.tokensB} tok</span>
-                        <span>${data.timeB}s</span>
+                    <div class="vs-card-body" id="vs-body-b">${esc(data.responseBText)}</div>
+                    <div class="vs-card-foot">
+                        <div class="vs-card-meta">
+                            <span>${data.tokensB} tok</span>
+                            <span>${data.timeB}s</span>
+                        </div>
+                        <button class="vs-btn-tiny vs-translate" data-target="b">번역</button>
                     </div>
                 </div>
             </div>
@@ -336,6 +342,51 @@ function renderResult(data) {
         if (btn) { btn.textContent = '저장됨'; btn.disabled = true; }
     });
     panel.querySelector('#vs-back')?.addEventListener('click', renderSetup);
+
+    // Translate buttons
+    const originals = { a: data.responseA, b: data.responseBText };
+    const translations = { a: null, b: null };
+    const showing = { a: 'original', b: 'original' };
+
+    panel.querySelectorAll('.vs-translate').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const t = btn.dataset.target;
+            const bodyEl = panel.querySelector(`#vs-body-${t}`);
+            if (!bodyEl) return;
+
+            if (showing[t] === 'translated' && translations[t]) {
+                bodyEl.textContent = originals[t];
+                btn.textContent = '번역';
+                showing[t] = 'original';
+                return;
+            }
+
+            if (translations[t]) {
+                bodyEl.textContent = translations[t];
+                btn.textContent = '원문';
+                showing[t] = 'translated';
+                return;
+            }
+
+            btn.textContent = '번역 중…';
+            btn.disabled = true;
+            try {
+                const translated = await generateQuietPrompt(
+                    `Translate the following text. If it's in Korean, translate to English. If it's in English or another language, translate to Korean. Output ONLY the translation, nothing else:\n\n${originals[t]}`,
+                    false, false
+                );
+                translations[t] = translated;
+                bodyEl.textContent = translated;
+                btn.textContent = '원문';
+                btn.disabled = false;
+                showing[t] = 'translated';
+            } catch (err) {
+                btn.textContent = '번역';
+                btn.disabled = false;
+                showToast('번역 실패: ' + (err.message || err));
+            }
+        });
+    });
 }
 
 function renderHistory() {
