@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
 
 let isGenerating = false;
 let panelOpen = false;
+let abortRequested = false;
 
 function getSettings() {
     if (!extension_settings[EXT_NAME]) {
@@ -315,8 +316,32 @@ async function startComparison() {
     saveSettingsDebounced();
 
     isGenerating = true;
+    abortRequested = false;
+
     const btn = document.querySelector('#vs-start');
-    if (btn) { btn.disabled = true; btn.textContent = 'A 생성 중…'; }
+    if (btn) {
+        btn.textContent = 'A 생성 중…';
+        btn.classList.add('vs-btn-generating');
+        btn.disabled = true;
+    }
+
+    // Show stop button
+    let stopBtn = document.querySelector('#vs-stop');
+    if (!stopBtn) {
+        stopBtn = document.createElement('button');
+        stopBtn.id = 'vs-stop';
+        stopBtn.className = 'vs-btn vs-btn-stop vs-btn-full';
+        stopBtn.textContent = '중지';
+        btn?.parentNode?.insertBefore(stopBtn, btn.nextSibling);
+    }
+    stopBtn.style.display = '';
+    stopBtn.onclick = () => {
+        abortRequested = true;
+        stopBtn.textContent = '중지 중…';
+        stopBtn.disabled = true;
+        // Try to stop ST's active generation
+        document.querySelector('#form_sheld')?.click();
+    };
 
     const originalPreset = getCurrentPresetValue();
 
@@ -327,6 +352,14 @@ async function startComparison() {
         const timeA = ((performance.now() - t0) / 1000).toFixed(1);
         const tokensA = getTokenCount(responseA);
 
+        // Check abort between A and B
+        if (abortRequested) {
+            await switchPreset(originalPreset);
+            showToast('비교가 중지되었습니다.');
+            renderSetup();
+            return;
+        }
+
         if (btn) btn.textContent = 'B 생성 중…';
 
         await switchPreset(presetBValue);
@@ -334,6 +367,13 @@ async function startComparison() {
         const responseB = await generateQuietPrompt(userInput, false, false);
         const timeB = ((performance.now() - t1) / 1000).toFixed(1);
         const tokensB = getTokenCount(responseB);
+
+        if (abortRequested) {
+            await switchPreset(originalPreset);
+            showToast('비교가 중지되었습니다.');
+            renderSetup();
+            return;
+        }
 
         await switchPreset(originalPreset);
 
@@ -345,13 +385,24 @@ async function startComparison() {
             date: formatDate(new Date()),
         });
     } catch (err) {
-        console.error('[Versus]', err);
-        showToast('생성 오류: ' + (err.message || err));
+        if (abortRequested) {
+            showToast('비교가 중지되었습니다.');
+        } else {
+            console.error('[Versus]', err);
+            showToast('생성 오류: ' + (err.message || err));
+        }
         await switchPreset(originalPreset);
         renderSetup();
     } finally {
         isGenerating = false;
-        if (btn) { btn.disabled = false; btn.textContent = '비교'; }
+        abortRequested = false;
+        const s = document.querySelector('#vs-stop');
+        if (s) s.style.display = 'none';
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '비교';
+            btn.classList.remove('vs-btn-generating');
+        }
     }
 }
 

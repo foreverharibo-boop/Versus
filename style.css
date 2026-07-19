@@ -190,6 +190,15 @@
     width: 100%;
     margin-bottom: 6px;
 }
+.vs-btn-stop {
+    background: transparent;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.3));
+    color: var(--SmartThemeBodyColor, #555);
+    margin-bottom: 6px;
+}
+.vs-btn-generating {
+    background: var(--SmartThemeBorderColor, #888) !important;
+}
 .vs-btn-primary {
     background: var(--SmartThemeQuoteColor, #888);
     color: var(--SmartThemeBlurTintColor, #fff);
