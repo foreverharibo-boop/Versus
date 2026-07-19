@@ -142,17 +142,21 @@ function togglePanel() {
     panelOpen = !panelOpen;
     const panel = document.querySelector('#vs-panel');
     const backdrop = document.querySelector('#vs-backdrop');
+    if (!panel || !backdrop) {
+        console.error('[Versus] panel or backdrop not found!');
+        return;
+    }
     if (panelOpen) {
-        panel?.classList.add('open');
-        backdrop?.classList.add('open');
-        if (panel) panel.style.display = 'flex';
-        if (backdrop) backdrop.style.display = 'block';
+        panel.classList.add('open');
+        backdrop.classList.add('open');
+        panel.style.setProperty('display', 'flex', 'important');
+        backdrop.style.setProperty('display', 'block', 'important');
         populatePresets();
     } else {
-        panel?.classList.remove('open');
-        backdrop?.classList.remove('open');
-        if (panel) panel.style.display = 'none';
-        if (backdrop) backdrop.style.display = 'none';
+        panel.classList.remove('open');
+        backdrop.classList.remove('open');
+        panel.style.setProperty('display', 'none', 'important');
+        backdrop.style.setProperty('display', 'none', 'important');
     }
 }
 
@@ -206,6 +210,7 @@ function renderSetup() {
     panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
     panel.querySelector('#vs-start')?.addEventListener('click', startComparison);
     panel.querySelector('#vs-show-history')?.addEventListener('click', renderHistory);
+    if (panelOpen) panel.style.setProperty('display', 'flex', 'important');
 }
 
 function renderResult(data) {

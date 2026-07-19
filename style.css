@@ -21,7 +21,7 @@
 
 /* ── Backdrop ── */
 #vs-backdrop {
-    display: none !important;
+    display: none;
     position: fixed !important;
     inset: 0 !important;
     background: rgba(0,0,0,0.4) !important;
@@ -31,7 +31,7 @@
 
 /* ── Panel ── */
 #vs-panel {
-    display: none !important;
+    display: none;
     position: fixed !important;
     z-index: 99999 !important;
     background: var(--SmartThemeBlurTintColor, #fff) !important;
