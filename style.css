@@ -81,7 +81,7 @@
     border-radius: 50%;
     cursor: pointer;
     font-size: 14px;
-    opacity: 0.5;
+    
     text-shadow: none;
     transition: opacity 0.15s;
 }
@@ -163,7 +163,6 @@
     border-color: var(--SmartThemeQuoteColor, #888);
 }
 .vs-input::placeholder {
-    opacity: 0.4;
     text-shadow: none;
 }
 
@@ -204,7 +203,6 @@
 .vs-btn-ghost {
     background: transparent;
     color: inherit;
-    opacity: 0.5;
     font-size: 12px;
     padding: 8px;
 }
@@ -212,7 +210,6 @@
 /* ── Result ── */
 .vs-input-echo {
     font-size: 12px;
-    opacity: 0.5;
     padding: 8px 12px;
     border-radius: 8px;
     border: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.1));
@@ -249,7 +246,6 @@
     font-size: 12px;
     font-weight: 600;
     text-shadow: none;
-    opacity: 0.7;
 }
 .vs-card-body {
     font-size: 13px;
@@ -263,11 +259,12 @@
 .vs-card-meta {
     display: flex;
     gap: 12px;
-    font-size: 11px;
-    opacity: 0.45;
+    font-size: 12px;
+    font-weight: 600;
     border-top: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.1));
     padding-top: 6px;
     text-shadow: none;
+    color: var(--SmartThemeBodyColor, #333);
 }
 
 /* ── History ── */
@@ -285,12 +282,10 @@
 }
 .vs-history-date {
     font-size: 11px;
-    opacity: 0.4;
     text-shadow: none;
 }
 .vs-history-char {
     font-size: 11px;
-    opacity: 0.35;
     text-shadow: none;
 }
 .vs-history-presets {
@@ -310,12 +305,10 @@
 }
 .vs-history-vs {
     font-size: 10px;
-    opacity: 0.35;
     text-shadow: none;
 }
 .vs-history-input {
     font-size: 11px;
-    opacity: 0.45;
     text-shadow: none;
     margin-bottom: 6px;
 }
@@ -335,13 +328,11 @@
     transition: opacity 0.15s;
 }
 .vs-btn-tiny:hover { opacity: 0.6; }
-.vs-btn-tiny.vs-del { opacity: 0.35; }
 
 .vs-empty {
     text-align: center;
     padding: 30px 0;
     font-size: 13px;
-    opacity: 0.35;
     text-shadow: none;
 }
 

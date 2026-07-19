@@ -60,17 +60,16 @@ async function generateWithUsage(userInput) {
         const res = await origFetch.apply(this, args);
         try {
             const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-            if (url.includes('/generate') || url.includes('/chat/completions') || url.includes('/v1/')) {
+            if (url.includes('/generate') || url.includes('/chat/completions') || url.includes('/v1/') || url.includes('/api/')) {
                 const clone = res.clone();
                 const text = await clone.text();
-                const m = text.match(/"usage"\s*:\s*\{[^}]*"prompt_tokens"\s*:\s*(\d+)[^}]*"completion_tokens"\s*:\s*(\d+)[^}]*\}/);
-                if (m) {
-                    usage = { prompt: parseInt(m[1]), completion: parseInt(m[2]) };
-                } else {
-                    const m2 = text.match(/"usage"\s*:\s*\{[^}]*"completion_tokens"\s*:\s*(\d+)[^}]*"prompt_tokens"\s*:\s*(\d+)[^}]*\}/);
-                    if (m2) {
-                        usage = { prompt: parseInt(m2[2]), completion: parseInt(m2[1]) };
-                    }
+                const matches = [...text.matchAll(/"prompt_tokens"\s*:\s*(\d+)/g)];
+                const compMatches = [...text.matchAll(/"completion_tokens"\s*:\s*(\d+)/g)];
+                if (matches.length > 0 && compMatches.length > 0) {
+                    usage = {
+                        prompt: parseInt(matches[matches.length - 1][1]),
+                        completion: parseInt(compMatches[compMatches.length - 1][1]),
+                    };
                 }
             }
         } catch {}
@@ -79,10 +78,21 @@ async function generateWithUsage(userInput) {
 
     try {
         const response = await generateQuietPrompt(userInput, false, false);
-        return { text: response, usage };
+        const fallbackTokens = getTokenCount(response);
+        return { text: response, usage, fallbackTokens };
     } finally {
         window.fetch = origFetch;
     }
+}
+
+function getTokenCount(text) {
+    try {
+        const context = getContext();
+        if (typeof context.getTokenCount === 'function') {
+            return context.getTokenCount(text);
+        }
+    } catch {}
+    return Math.ceil(text.length / 3);
 }
 
 function esc(str) {
@@ -100,10 +110,13 @@ function formatDate(d) {
     return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function formatUsage(usage) {
+function formatUsage(usage, fallback) {
     if (usage && usage.prompt != null && usage.completion != null) {
         const total = usage.prompt + usage.completion;
         return `<span title="입력 ${usage.prompt} + 출력 ${usage.completion}">${total} tok</span>`;
+    }
+    if (fallback != null) {
+        return `<span title="출력 토큰 (추정)">~${fallback} tok</span>`;
     }
     return '<span>— tok</span>';
 }
@@ -224,7 +237,7 @@ function renderResult(data) {
                     </div>
                     <div class="vs-card-body">${esc(data.responseA)}</div>
                     <div class="vs-card-meta">
-                        ${formatUsage(data.usageA)}
+                        ${formatUsage(data.usageA, data.fallbackTokensA)}
                         <span>${data.timeA}s</span>
                     </div>
                 </div>
@@ -235,7 +248,7 @@ function renderResult(data) {
                     </div>
                     <div class="vs-card-body">${esc(data.responseBText)}</div>
                     <div class="vs-card-meta">
-                        ${formatUsage(data.usageB)}
+                        ${formatUsage(data.usageB, data.fallbackTokensB)}
                         <span>${data.timeB}s</span>
                     </div>
                 </div>
@@ -363,6 +376,7 @@ async function startComparison() {
             responseA: resultA.text, responseBText: resultB.text,
             timeA, timeB,
             usageA: resultA.usage, usageB: resultB.usage,
+            fallbackTokensA: resultA.fallbackTokens, fallbackTokensB: resultB.fallbackTokens,
             charName: getCurrentCharName(),
             date: formatDate(new Date()),
         });
