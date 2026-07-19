@@ -28,10 +28,9 @@
     z-index: 99999 !important;
     align-items: flex-end !important;
     justify-content: center !important;
-    flex-direction: column !important;
 }
 
-/* ── Panel (child of backdrop, no position:fixed) ── */
+/* ── Panel (child of backdrop, bottom sheet) ── */
 #vs-panel {
     width: 100% !important;
     max-height: 85vh !important;
@@ -46,19 +45,18 @@
     box-shadow: 0 -2px 20px rgba(0,0,0,0.12) !important;
     display: flex !important;
     flex-direction: column !important;
-    margin-top: auto !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
 }
 @media (min-width: 769px) {
     #vs-backdrop {
         align-items: center !important;
-        justify-content: center !important;
     }
     #vs-panel {
         width: 580px !important;
         max-height: 80vh !important;
         border-radius: 14px !important;
         box-shadow: 0 6px 32px rgba(0,0,0,0.18) !important;
-        margin-top: 0 !important;
     }
 }
 
