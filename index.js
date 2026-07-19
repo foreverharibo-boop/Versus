@@ -145,10 +145,14 @@ function togglePanel() {
     if (panelOpen) {
         panel?.classList.add('open');
         backdrop?.classList.add('open');
+        if (panel) panel.style.display = 'flex';
+        if (backdrop) backdrop.style.display = 'block';
         populatePresets();
     } else {
         panel?.classList.remove('open');
         backdrop?.classList.remove('open');
+        if (panel) panel.style.display = 'none';
+        if (backdrop) backdrop.style.display = 'none';
     }
 }
 
