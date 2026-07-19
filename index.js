@@ -52,39 +52,6 @@ function getCurrentCharName() {
     return '';
 }
 
-async function generateWithUsage(userInput) {
-    let usage = null;
-    const origFetch = window.fetch;
-
-    window.fetch = async function (...args) {
-        const res = await origFetch.apply(this, args);
-        try {
-            const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-            if (url.includes('/generate') || url.includes('/chat/completions') || url.includes('/v1/') || url.includes('/api/')) {
-                const clone = res.clone();
-                const text = await clone.text();
-                const matches = [...text.matchAll(/"prompt_tokens"\s*:\s*(\d+)/g)];
-                const compMatches = [...text.matchAll(/"completion_tokens"\s*:\s*(\d+)/g)];
-                if (matches.length > 0 && compMatches.length > 0) {
-                    usage = {
-                        prompt: parseInt(matches[matches.length - 1][1]),
-                        completion: parseInt(compMatches[compMatches.length - 1][1]),
-                    };
-                }
-            }
-        } catch {}
-        return res;
-    };
-
-    try {
-        const response = await generateQuietPrompt(userInput, false, false);
-        const fallbackTokens = getTokenCount(response);
-        return { text: response, usage, fallbackTokens };
-    } finally {
-        window.fetch = origFetch;
-    }
-}
-
 function getTokenCount(text) {
     try {
         const context = getContext();
@@ -108,17 +75,6 @@ function truncate(str, len) {
 function formatDate(d) {
     const pad = n => String(n).padStart(2, '0');
     return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-function formatUsage(usage, fallback) {
-    if (usage && usage.prompt != null && usage.completion != null) {
-        const total = usage.prompt + usage.completion;
-        return `<span title="입력 ${usage.prompt} + 출력 ${usage.completion}">${total} tok</span>`;
-    }
-    if (fallback != null) {
-        return `<span title="출력 토큰 (추정)">~${fallback} tok</span>`;
-    }
-    return '<span>— tok</span>';
 }
 
 function showToast(msg) {
@@ -245,7 +201,7 @@ function renderResult(data) {
                     </div>
                     <div class="vs-card-body">${esc(data.responseA)}</div>
                     <div class="vs-card-meta">
-                        ${formatUsage(data.usageA, data.fallbackTokensA)}
+                        <span>${data.tokensA} tok</span>
                         <span>${data.timeA}s</span>
                     </div>
                 </div>
@@ -256,7 +212,7 @@ function renderResult(data) {
                     </div>
                     <div class="vs-card-body">${esc(data.responseBText)}</div>
                     <div class="vs-card-meta">
-                        ${formatUsage(data.usageB, data.fallbackTokensB)}
+                        <span>${data.tokensB} tok</span>
                         <span>${data.timeB}s</span>
                     </div>
                 </div>
@@ -367,24 +323,24 @@ async function startComparison() {
     try {
         await switchPreset(presetAValue);
         const t0 = performance.now();
-        const resultA = await generateWithUsage(userInput);
+        const responseA = await generateQuietPrompt(userInput, false, false);
         const timeA = ((performance.now() - t0) / 1000).toFixed(1);
+        const tokensA = getTokenCount(responseA);
 
         if (btn) btn.textContent = 'B 생성 중…';
 
         await switchPreset(presetBValue);
         const t1 = performance.now();
-        const resultB = await generateWithUsage(userInput);
+        const responseB = await generateQuietPrompt(userInput, false, false);
         const timeB = ((performance.now() - t1) / 1000).toFixed(1);
+        const tokensB = getTokenCount(responseB);
 
         await switchPreset(originalPreset);
 
         renderResult({
             userInput, presetAValue, presetAName, presetBValue, presetBName,
-            responseA: resultA.text, responseBText: resultB.text,
-            timeA, timeB,
-            usageA: resultA.usage, usageB: resultB.usage,
-            fallbackTokensA: resultA.fallbackTokens, fallbackTokensB: resultB.fallbackTokens,
+            responseA, responseBText: responseB,
+            timeA, timeB, tokensA, tokensB,
             charName: getCurrentCharName(),
             date: formatDate(new Date()),
         });
