@@ -149,10 +149,38 @@ function togglePanel() {
         return;
     }
     if (panelOpen) {
-        backdrop.style.setProperty('display', 'flex', 'important');
+        backdrop.style.cssText = `
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background: rgba(0,0,0,0.5) !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-shadow: none !important;
+        `;
+        const panel = document.querySelector('#vs-panel');
+        if (panel) {
+            panel.style.cssText = `
+                width: 92vw !important;
+                max-width: 580px !important;
+                max-height: 80vh !important;
+                background: var(--SmartThemeBlurTintColor, #fff) !important;
+                color: var(--SmartThemeBodyColor, #222) !important;
+                border-radius: 14px !important;
+                box-shadow: 0 6px 32px rgba(0,0,0,0.25) !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+                text-shadow: none !important;
+                -webkit-overflow-scrolling: touch;
+            `;
+        }
         populatePresets();
     } else {
-        backdrop.style.setProperty('display', 'none', 'important');
+        backdrop.style.cssText = 'display: none !important;';
     }
 }
 
