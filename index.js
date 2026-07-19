@@ -128,34 +128,30 @@ function buildUI() {
 
     const backdrop = document.createElement('div');
     backdrop.id = 'vs-backdrop';
-    backdrop.addEventListener('click', togglePanel);
-    document.documentElement.appendChild(backdrop);
+    backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) togglePanel();
+    });
 
     const panel = document.createElement('div');
     panel.id = 'vs-panel';
-    document.documentElement.appendChild(panel);
+    backdrop.appendChild(panel);
+
+    document.documentElement.appendChild(backdrop);
 
     renderSetup();
 }
 
 function togglePanel() {
     panelOpen = !panelOpen;
-    const panel = document.querySelector('#vs-panel');
     const backdrop = document.querySelector('#vs-backdrop');
-    if (!panel || !backdrop) {
-        console.error('[Versus] panel or backdrop not found!');
+    if (!backdrop) {
+        console.error('[Versus] backdrop not found!');
         return;
     }
     if (panelOpen) {
-        panel.classList.add('open');
-        backdrop.classList.add('open');
-        panel.style.setProperty('display', 'flex', 'important');
-        backdrop.style.setProperty('display', 'block', 'important');
+        backdrop.style.setProperty('display', 'flex', 'important');
         populatePresets();
     } else {
-        panel.classList.remove('open');
-        backdrop.classList.remove('open');
-        panel.style.setProperty('display', 'none', 'important');
         backdrop.style.setProperty('display', 'none', 'important');
     }
 }
@@ -210,7 +206,6 @@ function renderSetup() {
     panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
     panel.querySelector('#vs-start')?.addEventListener('click', startComparison);
     panel.querySelector('#vs-show-history')?.addEventListener('click', renderHistory);
-    if (panelOpen) panel.style.setProperty('display', 'flex', 'important');
 }
 
 function renderResult(data) {
