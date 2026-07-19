@@ -11,6 +11,26 @@ const DEFAULT_SETTINGS = {
 let isGenerating = false;
 let panelOpen = false;
 let abortRequested = false;
+let currentAbort = null;
+let origFetch = null;
+
+function startFetchIntercept() {
+    currentAbort = new AbortController();
+    origFetch = window.fetch;
+    window.fetch = function (url, opts = {}) {
+        return origFetch.call(this, url, { ...opts, signal: currentAbort.signal });
+    };
+}
+
+function stopFetchIntercept() {
+    if (origFetch) { window.fetch = origFetch; origFetch = null; }
+    currentAbort = null;
+}
+
+function abortGeneration() {
+    abortRequested = true;
+    currentAbort?.abort();
+}
 
 function getSettings() {
     if (!extension_settings[EXT_NAME]) {
@@ -335,24 +355,26 @@ async function startComparison() {
         btn?.parentNode?.insertBefore(stopBtn, btn.nextSibling);
     }
     stopBtn.style.display = '';
+    stopBtn.disabled = false;
+    stopBtn.textContent = '중지';
     stopBtn.onclick = () => {
-        abortRequested = true;
+        abortGeneration();
         stopBtn.textContent = '중지 중…';
         stopBtn.disabled = true;
-        // Try to stop ST's active generation
-        document.querySelector('#form_sheld')?.click();
     };
 
     const originalPreset = getCurrentPresetValue();
 
     try {
+        // Generate A
         await switchPreset(presetAValue);
+        startFetchIntercept();
         const t0 = performance.now();
         const responseA = await generateQuietPrompt(userInput, false, false);
+        stopFetchIntercept();
         const timeA = ((performance.now() - t0) / 1000).toFixed(1);
         const tokensA = getTokenCount(responseA);
 
-        // Check abort between A and B
         if (abortRequested) {
             await switchPreset(originalPreset);
             showToast('비교가 중지되었습니다.');
@@ -360,11 +382,13 @@ async function startComparison() {
             return;
         }
 
+        // Generate B
         if (btn) btn.textContent = 'B 생성 중…';
-
         await switchPreset(presetBValue);
+        startFetchIntercept();
         const t1 = performance.now();
         const responseB = await generateQuietPrompt(userInput, false, false);
+        stopFetchIntercept();
         const timeB = ((performance.now() - t1) / 1000).toFixed(1);
         const tokensB = getTokenCount(responseB);
 
@@ -385,6 +409,7 @@ async function startComparison() {
             date: formatDate(new Date()),
         });
     } catch (err) {
+        stopFetchIntercept();
         if (abortRequested) {
             showToast('비교가 중지되었습니다.');
         } else {
@@ -394,6 +419,7 @@ async function startComparison() {
         await switchPreset(originalPreset);
         renderSetup();
     } finally {
+        stopFetchIntercept();
         isGenerating = false;
         abortRequested = false;
         const s = document.querySelector('#vs-stop');
