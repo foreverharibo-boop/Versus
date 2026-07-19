@@ -68,7 +68,7 @@ async function switchPreset(presetValue) {
 // ── Connection Profile ──
 
 function getProfileSelector() {
-    return document.querySelector('#connection_profile');
+    return document.querySelector('#connection_profiles');
 }
 
 function getProfileList() {
