@@ -65,6 +65,33 @@ async function switchPreset(presetValue) {
     await new Promise(r => setTimeout(r, 600));
 }
 
+// ── Connection Profile ──
+
+function getProfileSelector() {
+    return document.querySelector('#connection_profile');
+}
+
+function getProfileList() {
+    const sel = getProfileSelector();
+    if (!sel) return [];
+    return Array.from(sel.options)
+        .filter(o => o.value)
+        .map(o => ({ value: o.value, name: o.text || o.value }));
+}
+
+function getCurrentProfileValue() {
+    const sel = getProfileSelector();
+    return sel ? sel.value : '';
+}
+
+async function switchProfile(profileValue) {
+    const sel = getProfileSelector();
+    if (!sel || !profileValue || sel.value === profileValue) return;
+    sel.value = profileValue;
+    sel.dispatchEvent(new Event('change'));
+    await new Promise(r => setTimeout(r, 800));
+}
+
 function getCurrentCharName() {
     try {
         const context = getContext();
@@ -186,7 +213,9 @@ function togglePanel() {
 
 function populatePresets() {
     const presets = getPresetList();
+    const profiles = getProfileList();
     const settings = getSettings();
+
     ['#vs-sel-a', '#vs-sel-b'].forEach(id => {
         const sel = document.querySelector(id);
         if (!sel) return;
@@ -198,10 +227,27 @@ function populatePresets() {
             sel.appendChild(o);
         });
     });
+
+    ['#vs-profile-a', '#vs-profile-b'].forEach(id => {
+        const sel = document.querySelector(id);
+        if (!sel) return;
+        sel.innerHTML = '<option value="">현재 프로필 유지</option>';
+        profiles.forEach(p => {
+            const o = document.createElement('option');
+            o.value = p.value;
+            o.textContent = p.name;
+            sel.appendChild(o);
+        });
+    });
+
     const a = document.querySelector('#vs-sel-a');
     const b = document.querySelector('#vs-sel-b');
+    const pa = document.querySelector('#vs-profile-a');
+    const pb = document.querySelector('#vs-profile-b');
     if (a && settings.lastPresetA) a.value = settings.lastPresetA;
     if (b && settings.lastPresetB) b.value = settings.lastPresetB;
+    if (pa && settings.lastProfileA) pa.value = settings.lastProfileA;
+    if (pb && settings.lastProfileB) pb.value = settings.lastProfileB;
 }
 
 // ── Views ──
@@ -219,10 +265,12 @@ function renderSetup() {
                 <div class="vs-preset-slot">
                     <span class="vs-slot-label">A</span>
                     <select id="vs-sel-a" class="vs-sel"></select>
+                    <select id="vs-profile-a" class="vs-sel vs-sel-profile"></select>
                 </div>
                 <div class="vs-preset-slot">
                     <span class="vs-slot-label">B</span>
                     <select id="vs-sel-b" class="vs-sel"></select>
+                    <select id="vs-profile-b" class="vs-sel vs-sel-profile"></select>
                 </div>
             </div>
             <textarea id="vs-input" class="vs-input" rows="3" placeholder="비워두면 (ooc : keep going) 자동 입력"></textarea>
@@ -346,14 +394,21 @@ async function startComparison() {
 
     const selectA = document.querySelector('#vs-sel-a');
     const selectB = document.querySelector('#vs-sel-b');
+    const profileA = document.querySelector('#vs-profile-a');
+    const profileB = document.querySelector('#vs-profile-b');
     const inputEl = document.querySelector('#vs-input');
 
     const presetAValue = selectA?.value;
     const presetBValue = selectB?.value;
+    const profileAValue = profileA?.value || '';
+    const profileBValue = profileB?.value || '';
     let userInput = inputEl?.value?.trim();
 
     if (!presetAValue || !presetBValue) { showToast('프리셋을 모두 선택해주세요.'); return; }
-    if (presetAValue === presetBValue) { showToast('서로 다른 프리셋을 선택해주세요.'); return; }
+    if (presetAValue === presetBValue && profileAValue === profileBValue) {
+        showToast('프리셋이나 프로필 중 하나는 다르게 선택해주세요.');
+        return;
+    }
     if (!userInput) {
         userInput = '(ooc : keep going)';
         if (inputEl) inputEl.value = userInput;
@@ -361,10 +416,14 @@ async function startComparison() {
 
     const presetAName = selectA.options[selectA.selectedIndex]?.text || presetAValue;
     const presetBName = selectB.options[selectB.selectedIndex]?.text || presetBValue;
+    const profileAName = profileA?.options[profileA.selectedIndex]?.text || '';
+    const profileBName = profileB?.options[profileB.selectedIndex]?.text || '';
 
     const settings = getSettings();
     settings.lastPresetA = presetAValue;
     settings.lastPresetB = presetBValue;
+    settings.lastProfileA = profileAValue;
+    settings.lastProfileB = profileBValue;
     saveSettingsDebounced();
 
     isGenerating = true;
@@ -377,7 +436,6 @@ async function startComparison() {
         btn.disabled = true;
     }
 
-    // Show stop button
     let stopBtn = document.querySelector('#vs-stop');
     if (!stopBtn) {
         stopBtn = document.createElement('button');
@@ -396,9 +454,11 @@ async function startComparison() {
     };
 
     const originalPreset = getCurrentPresetValue();
+    const originalProfile = getCurrentProfileValue();
 
     try {
         // Generate A
+        if (profileAValue) await switchProfile(profileAValue);
         await switchPreset(presetAValue);
         startFetchIntercept();
         const t0 = performance.now();
@@ -409,6 +469,7 @@ async function startComparison() {
 
         if (abortRequested) {
             await switchPreset(originalPreset);
+            if (originalProfile) await switchProfile(originalProfile);
             showToast('비교가 중지되었습니다.');
             renderSetup();
             return;
@@ -416,6 +477,7 @@ async function startComparison() {
 
         // Generate B
         if (btn) btn.textContent = 'B 생성 중…';
+        if (profileBValue) await switchProfile(profileBValue);
         await switchPreset(presetBValue);
         startFetchIntercept();
         const t1 = performance.now();
@@ -426,15 +488,22 @@ async function startComparison() {
 
         if (abortRequested) {
             await switchPreset(originalPreset);
+            if (originalProfile) await switchProfile(originalProfile);
             showToast('비교가 중지되었습니다.');
             renderSetup();
             return;
         }
 
+        // Restore
         await switchPreset(originalPreset);
+        if (originalProfile) await switchProfile(originalProfile);
+
+        const labelA = profileAName ? `${presetAName} · ${profileAName}` : presetAName;
+        const labelB = profileBName ? `${presetBName} · ${profileBName}` : presetBName;
 
         renderResult({
-            userInput, presetAValue, presetAName, presetBValue, presetBName,
+            userInput, presetAValue, presetAName: labelA, presetBValue, presetBName: labelB,
+            profileAValue, profileBValue,
             responseA, responseBText: responseB,
             timeA, timeB, tokensA, tokensB,
             charName: getCurrentCharName(),
@@ -449,6 +518,7 @@ async function startComparison() {
             showToast('생성 오류: ' + (err.message || err));
         }
         await switchPreset(originalPreset);
+        if (originalProfile) await switchProfile(originalProfile);
         renderSetup();
     } finally {
         stopFetchIntercept();

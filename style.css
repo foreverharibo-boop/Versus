@@ -112,6 +112,11 @@
 .vs-sel:focus {
     border-color: var(--SmartThemeQuoteColor, #888);
 }
+.vs-sel-profile {
+    font-size: 11px;
+    padding: 6px 8px;
+    border-style: dashed;
+}
 
 /* ── Input ── */
 .vs-input {
