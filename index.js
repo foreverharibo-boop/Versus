@@ -134,12 +134,20 @@ function showToast(msg) {
 // ── UI ──
 
 function buildUI() {
-    const fab = document.createElement('div');
-    fab.id = 'vs-fab';
-    fab.textContent = 'VS';
-    fab.addEventListener('click', togglePanel);
-    const leftSend = document.querySelector('#leftSendForm');
-    (leftSend || document.body).appendChild(fab);
+    // Wand menu item
+    const menuItem = document.createElement('div');
+    menuItem.id = 'vs-wand-btn';
+    menuItem.classList.add('list-group-item', 'flex-container', 'flexGap5');
+    menuItem.title = 'Versus — 프리셋 A/B 비교';
+    menuItem.innerHTML = '<span class="vs-wand-icon">VS</span><span>Versus</span>';
+    menuItem.addEventListener('click', () => {
+        togglePanel();
+        document.querySelector('#extensionsMenu')?.classList.remove('show');
+    });
+    const wand = document.querySelector('#extensionsMenu');
+    if (wand) {
+        wand.appendChild(menuItem);
+    }
 
     const backdrop = document.createElement('div');
     backdrop.id = 'vs-backdrop';

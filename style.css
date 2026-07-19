@@ -1,24 +1,23 @@
-/* ── FAB ── */
-#vs-fab {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--SmartThemeQuoteColor, #888);
-    color: var(--SmartThemeBlurTintColor, #fff);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 800;
+/* ── Wand menu item ── */
+#vs-wand-btn {
     cursor: pointer;
     text-shadow: none;
-    user-select: none;
-    flex-shrink: 0;
-    letter-spacing: -0.5px;
-    z-index: 1000;
-    transition: opacity 0.15s;
 }
-#vs-fab:active { opacity: 0.7; }
+.vs-wand-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--SmartThemeQuoteColor, #888);
+    color: var(--SmartThemeBlurTintColor, #fff);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    text-shadow: none;
+    flex-shrink: 0;
+}
 
 /* ── Backdrop ── */
 #vs-backdrop {
@@ -259,12 +258,16 @@
 .vs-card-meta {
     display: flex;
     gap: 12px;
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 13px;
+    font-weight: 700;
     border-top: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.1));
-    padding-top: 6px;
-    text-shadow: none;
-    color: var(--SmartThemeBodyColor, #333);
+    padding-top: 8px;
+    text-shadow: none !important;
+    color: var(--SmartThemeBodyColor, #333) !important;
+}
+.vs-card-meta span {
+    color: var(--SmartThemeBodyColor, #333) !important;
+    text-shadow: none !important;
 }
 
 /* ── History ── */
