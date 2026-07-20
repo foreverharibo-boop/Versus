@@ -95,6 +95,61 @@
     flex-direction: column;
     gap: 6px;
 }
+.vs-slot-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.vs-prompt-cfg {
+    font-size: 14px;
+    padding: 2px 6px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #666);
+    text-shadow: none;
+}
+.vs-prompt-cfg.vs-has-overrides {
+    color: var(--SmartThemeQuoteColor, #e67e22);
+}
+.vs-prompt-preset-name {
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 10px;
+    color: var(--SmartThemeBodyColor, #555);
+    text-shadow: none;
+}
+.vs-prompt-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    max-height: 50vh;
+    overflow-y: auto;
+}
+.vs-prompt-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.15));
+    cursor: pointer;
+    font-size: 13px;
+    text-shadow: none;
+}
+.vs-prompt-item.vs-overridden {
+    border-color: var(--SmartThemeQuoteColor, #e67e22);
+    background: rgba(230, 126, 34, 0.06);
+}
+.vs-prompt-item input[type="checkbox"] {
+    flex-shrink: 0;
+}
+.vs-prompt-name {
+    text-shadow: none;
+    word-break: break-word;
+}
 .vs-slot-label {
     display: inline-flex;
     align-items: center;

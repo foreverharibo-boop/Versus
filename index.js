@@ -18,6 +18,46 @@ let abortRequested = false;
 let currentAbort = null;
 let origFetch = null;
 let slotCount = 2;
+const slotPromptOverrides = {}; // { 0: { 'main': true, 'jailbreak': false }, ... }
+
+// ── Prompt Manager helpers ──
+
+function getPromptEntries() {
+    const entries = [];
+    document.querySelectorAll('[data-pm-identifier]').forEach(item => {
+        const id = item.dataset.pmIdentifier;
+        if (!id) return;
+        const nameEl = item.querySelector('.completion_prompt_manager_prompt_name')
+            || item.querySelector('.prompt_manager_prompt_name')
+            || item.querySelector('[data-pm-name]');
+        const name = nameEl?.textContent?.trim() || id;
+        const checkbox = item.querySelector('input[type="checkbox"]');
+        const enabled = checkbox?.checked ?? true;
+        entries.push({ id, name, enabled });
+    });
+    return entries;
+}
+
+function capturePromptStates() {
+    const states = {};
+    document.querySelectorAll('[data-pm-identifier]').forEach(item => {
+        const id = item.dataset.pmIdentifier;
+        const checkbox = item?.querySelector('input[type="checkbox"]');
+        if (id && checkbox) states[id] = checkbox.checked;
+    });
+    return states;
+}
+
+function applyPromptOverrides(overrides) {
+    if (!overrides) return;
+    for (const [id, enabled] of Object.entries(overrides)) {
+        const item = document.querySelector(`[data-pm-identifier="${id}"]`);
+        const checkbox = item?.querySelector('input[type="checkbox"]');
+        if (checkbox && checkbox.checked !== enabled) {
+            checkbox.click();
+        }
+    }
+}
 
 function startFetchIntercept() {
     currentAbort = new AbortController();
@@ -196,9 +236,13 @@ function renderSetup() {
 
     let slotsHTML = '';
     for (let i = 0; i < slotCount; i++) {
+        const hasOverrides = slotPromptOverrides[i] && Object.keys(slotPromptOverrides[i]).length > 0;
         slotsHTML += `
             <div class="vs-preset-slot">
-                <span class="vs-slot-label">${LABELS[i]}</span>
+                <div class="vs-slot-top">
+                    <span class="vs-slot-label">${LABELS[i]}</span>
+                    <button class="vs-btn-tiny vs-prompt-cfg ${hasOverrides ? 'vs-has-overrides' : ''}" data-slot="${i}" title="프롬프트 설정">⚙</button>
+                </div>
                 <select id="vs-sel-${i}" class="vs-sel"></select>
                 <select id="vs-profile-${i}" class="vs-sel vs-sel-profile"></select>
             </div>`;
@@ -228,7 +272,15 @@ function renderSetup() {
         if (slotCount < MAX_SLOTS) { slotCount++; saveSlotCount(); renderSetup(); }
     });
     panel.querySelector('#vs-remove-slot')?.addEventListener('click', () => {
-        if (slotCount > MIN_SLOTS) { slotCount--; saveSlotCount(); renderSetup(); }
+        if (slotCount > MIN_SLOTS) { slotCount--; delete slotPromptOverrides[slotCount]; saveSlotCount(); renderSetup(); }
+    });
+    panel.querySelectorAll('.vs-prompt-cfg').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const slotIdx = parseInt(btn.dataset.slot);
+            const sel = document.querySelector(`#vs-sel-${slotIdx}`);
+            if (!sel?.value) { showToast('먼저 프리셋을 선택해주세요.'); return; }
+            await renderPromptConfig(slotIdx, sel.value, sel.options[sel.selectedIndex]?.text || '');
+        });
     });
 }
 
@@ -236,6 +288,78 @@ function saveSlotCount() {
     const settings = getSettings();
     settings.slotCount = slotCount;
     saveSettingsDebounced();
+}
+
+async function renderPromptConfig(slotIdx, presetValue, presetName) {
+    const panel = document.querySelector('#vs-panel');
+    if (!panel) return;
+
+    // Temporarily switch to the target preset to read its prompt entries
+    const originalPreset = getCurrentPresetValue();
+    await switchPreset(presetValue);
+    await new Promise(r => setTimeout(r, 300));
+    const entries = getPromptEntries();
+    await switchPreset(originalPreset);
+
+    if (entries.length === 0) {
+        showToast('프롬프트 항목을 찾을 수 없습니다.');
+        return;
+    }
+
+    // Merge with existing overrides
+    const overrides = slotPromptOverrides[slotIdx] || {};
+
+    const itemsHTML = entries.map(e => {
+        const checked = overrides.hasOwnProperty(e.id) ? overrides[e.id] : e.enabled;
+        const isOverridden = overrides.hasOwnProperty(e.id) && overrides[e.id] !== e.enabled;
+        return `
+            <label class="vs-prompt-item ${isOverridden ? 'vs-overridden' : ''}">
+                <input type="checkbox" data-pm-id="${esc(e.id)}" ${checked ? 'checked' : ''}>
+                <span class="vs-prompt-name">${esc(e.name)}</span>
+            </label>`;
+    }).join('');
+
+    panel.innerHTML = `
+        <div class="vs-head">
+            <span class="vs-head-title">${LABELS[slotIdx]} 프롬프트 설정</span>
+            <span class="vs-head-close" id="vs-close">✕</span>
+        </div>
+        <div class="vs-content">
+            <div class="vs-prompt-preset-name">${esc(presetName)}</div>
+            <div class="vs-prompt-list">${itemsHTML}</div>
+            <div class="vs-actions">
+                <button class="vs-btn vs-btn-sub" id="vs-prompt-reset">초기화</button>
+                <button class="vs-btn vs-btn-primary" id="vs-prompt-save">적용</button>
+            </div>
+            <button class="vs-btn vs-btn-ghost" id="vs-back">← 돌아가기</button>
+        </div>
+    `;
+
+    panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
+    panel.querySelector('#vs-back')?.addEventListener('click', renderSetup);
+    panel.querySelector('#vs-prompt-reset')?.addEventListener('click', () => {
+        delete slotPromptOverrides[slotIdx];
+        showToast('초기화되었습니다.');
+        renderSetup();
+    });
+    panel.querySelector('#vs-prompt-save')?.addEventListener('click', () => {
+        const newOverrides = {};
+        panel.querySelectorAll('.vs-prompt-item input[type="checkbox"]').forEach(cb => {
+            const id = cb.dataset.pmId;
+            const checked = cb.checked;
+            const original = entries.find(e => e.id === id);
+            if (original && checked !== original.enabled) {
+                newOverrides[id] = checked;
+            }
+        });
+        if (Object.keys(newOverrides).length > 0) {
+            slotPromptOverrides[slotIdx] = newOverrides;
+        } else {
+            delete slotPromptOverrides[slotIdx];
+        }
+        showToast('적용되었습니다.');
+        renderSetup();
+    });
 }
 
 function renderResult(data) {
@@ -485,10 +609,18 @@ async function startComparison() {
 
             if (slots[i].profileValue) await switchProfile(slots[i].profileValue);
             await switchPreset(slots[i].presetValue);
+
+            // Apply prompt overrides for this slot
+            const savedStates = capturePromptStates();
+            applyPromptOverrides(slotPromptOverrides[i]);
+
             startFetchIntercept();
             const t = performance.now();
             const response = await generateQuietPrompt(userInput, false, false);
             stopFetchIntercept();
+
+            // Restore prompt states
+            applyPromptOverrides(savedStates);
 
             results.push({
                 ...slots[i],
