@@ -129,15 +129,17 @@
     overflow-y: auto;
 }
 .vs-prompt-item {
+    border-radius: 8px;
+    border: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.15));
+    padding: 8px 10px;
+    font-size: 13px;
+    text-shadow: none;
+}
+.vs-prompt-item-top {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 10px;
-    border-radius: 8px;
-    border: 1px solid var(--SmartThemeBorderColor, rgba(128,128,128,0.15));
     cursor: pointer;
-    font-size: 13px;
-    text-shadow: none;
 }
 .vs-prompt-item.vs-overridden {
     border-color: var(--SmartThemeQuoteColor, #e67e22);
@@ -149,6 +151,30 @@
 .vs-prompt-name {
     text-shadow: none;
     word-break: break-word;
+    flex: 1;
+}
+.vs-prompt-expand {
+    font-size: 10px;
+    padding: 1px 4px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor, #888);
+    flex-shrink: 0;
+}
+.vs-prompt-preview {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: var(--SmartThemeBorderColor, rgba(128,128,128,0.08));
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+    text-shadow: none;
+    color: var(--SmartThemeBodyColor, #555);
 }
 .vs-slot-label {
     display: inline-flex;

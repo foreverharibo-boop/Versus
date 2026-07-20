@@ -1,6 +1,9 @@
 import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, generateQuietPrompt, chat, addOneMessage, saveChatDebounced } from '../../../../script.js';
 
+let oai_settings = null;
+try { import('../../../openai.js').then(m => { oai_settings = m.oai_settings; }); } catch {}
+
 const EXT_NAME = 'Versus';
 const LABELS = ['A', 'B', 'C', 'D', 'E'];
 const MAX_SLOTS = 5;
@@ -33,9 +36,34 @@ function getPromptEntries() {
         const name = nameEl?.textContent?.trim() || id;
         const checkbox = item.querySelector('input[type="checkbox"]');
         const enabled = checkbox?.checked ?? true;
-        entries.push({ id, name, enabled });
+        const content = getPromptContent(id);
+        entries.push({ id, name, enabled, content });
     });
     return entries;
+}
+
+function getPromptContent(identifier) {
+    // Try oai_settings.prompts first
+    if (oai_settings?.prompts) {
+        const p = oai_settings.prompts.find(p => p.identifier === identifier);
+        if (p?.content) return p.content;
+    }
+    // Try character card fields
+    try {
+        const ctx = getContext();
+        const char = ctx.characters?.[ctx.characterId];
+        if (char) {
+            const map = {
+                charDescription: char.description,
+                charPersonality: char.personality,
+                scenario: char.scenario,
+                persona: char.persona,
+                mesExamples: char.mes_example,
+            };
+            if (map[identifier]) return map[identifier];
+        }
+    } catch {}
+    return '';
 }
 
 function capturePromptStates() {
@@ -312,11 +340,17 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const itemsHTML = entries.map(e => {
         const checked = overrides.hasOwnProperty(e.id) ? overrides[e.id] : e.enabled;
         const isOverridden = overrides.hasOwnProperty(e.id) && overrides[e.id] !== e.enabled;
+        const hasContent = e.content && e.content.trim().length > 0;
+        const preview = hasContent ? esc(e.content.trim().slice(0, 200)) + (e.content.length > 200 ? '…' : '') : '';
         return `
-            <label class="vs-prompt-item ${isOverridden ? 'vs-overridden' : ''}">
-                <input type="checkbox" data-pm-id="${esc(e.id)}" ${checked ? 'checked' : ''}>
-                <span class="vs-prompt-name">${esc(e.name)}</span>
-            </label>`;
+            <div class="vs-prompt-item ${isOverridden ? 'vs-overridden' : ''}">
+                <label class="vs-prompt-item-top">
+                    <input type="checkbox" data-pm-id="${esc(e.id)}" ${checked ? 'checked' : ''}>
+                    <span class="vs-prompt-name">${esc(e.name)}</span>
+                    ${hasContent ? '<button class="vs-btn-tiny vs-prompt-expand" data-id="' + esc(e.id) + '">▼</button>' : ''}
+                </label>
+                ${hasContent ? '<div class="vs-prompt-preview" id="vs-preview-' + esc(e.id) + '" style="display:none;">' + preview + '</div>' : ''}
+            </div>`;
     }).join('');
 
     panel.innerHTML = `
@@ -359,6 +393,21 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
         }
         showToast('적용되었습니다.');
         renderSetup();
+    });
+
+    // Expand/collapse content preview
+    panel.querySelectorAll('.vs-prompt-expand').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const id = btn.dataset.id;
+            const preview = panel.querySelector(`#vs-preview-${id}`);
+            if (preview) {
+                const showing = preview.style.display !== 'none';
+                preview.style.display = showing ? 'none' : 'block';
+                btn.textContent = showing ? '▼' : '▲';
+            }
+        });
     });
 }
 
@@ -565,10 +614,6 @@ async function startComparison() {
             displayName: prof?.value ? `${presetName} · ${profileName}` : presetName,
         });
     }
-
-    // Check at least one difference
-    const allSame = slots.every(s => s.presetValue === slots[0].presetValue && s.profileValue === slots[0].profileValue);
-    if (allSame) { showToast('최소 하나는 다르게 선택해주세요.'); return; }
 
     if (!userInput) {
         userInput = '(ooc : keep going)';
