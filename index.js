@@ -2,7 +2,15 @@ import { extension_settings, getContext } from '../../../extensions.js';
 import { saveSettingsDebounced, generateQuietPrompt, chat, addOneMessage, saveChatDebounced } from '../../../../script.js';
 
 let oai_settings = null;
-try { import('../../../openai.js').then(m => { oai_settings = m.oai_settings; }); } catch {}
+(async () => {
+    try {
+        const mod = await import('../../../openai.js');
+        oai_settings = mod.oai_settings;
+        console.log('[Versus] oai_settings loaded:', !!oai_settings);
+    } catch (e) {
+        console.log('[Versus] oai_settings import failed:', e);
+    }
+})();
 
 const EXT_NAME = 'Versus';
 const LABELS = ['A', 'B', 'C', 'D', 'E'];
@@ -371,13 +379,34 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Switch to target preset to load its prompt data into oai_settings
+    // Switch to target preset
     const originalPreset = getCurrentPresetValue();
+    console.log('[Versus] switching from', originalPreset, 'to', presetValue);
     await switchPreset(presetValue);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1200));
 
-    // Read from oai_settings (data, not DOM)
-    const entries = getPromptEntriesFromSettings();
+    // Debug: log oai_settings structure
+    if (oai_settings) {
+        console.log('[Versus] oai_settings.prompts:', JSON.parse(JSON.stringify(oai_settings.prompts || [])));
+        console.log('[Versus] oai_settings.prompt_order:', JSON.parse(JSON.stringify(oai_settings.prompt_order || [])));
+        console.log('[Versus] oai_settings keys:', Object.keys(oai_settings));
+    } else {
+        console.log('[Versus] oai_settings is null');
+    }
+
+    // Debug: log DOM entries
+    const domEntries = getPromptEntries();
+    console.log('[Versus] DOM prompt entries:', domEntries);
+
+    // Try to read from oai_settings
+    let entries = getPromptEntriesFromSettings();
+    console.log('[Versus] Settings prompt entries:', entries);
+
+    // Fallback to DOM if settings returned nothing
+    if (entries.length === 0) {
+        console.log('[Versus] Falling back to DOM entries');
+        entries = domEntries;
+    }
 
     // Switch back
     await switchPreset(originalPreset);
@@ -710,6 +739,10 @@ async function startComparison() {
 
             // Apply prompt overrides for this slot
             const savedStates = capturePromptStates();
+            if (slotPromptOverrides[i]) {
+                console.log(`[Versus] Slot ${LABELS[i]} applying overrides:`, slotPromptOverrides[i]);
+                console.log(`[Versus] Saved states before override:`, savedStates);
+            }
             applyPromptOverrides(slotPromptOverrides[i]);
 
             startFetchIntercept();
