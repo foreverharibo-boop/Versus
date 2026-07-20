@@ -33,160 +33,74 @@ const slotPromptOverrides = {}; // { 0: { 'main': true, 'jailbreak': false }, ..
 
 // ── Prompt Manager helpers ──
 
-function getPromptEntriesFromSettings() {
-    const entries = [];
-    try {
-        if (!oai_settings?.prompts) return entries;
-        const promptOrder = oai_settings.prompt_order;
-
-        // Get the active prompt order (try character-specific, then default)
-        let activeOrder = null;
-        if (Array.isArray(promptOrder)) {
-            // Some ST versions: prompt_order is array of { character_id, order }
-            const ctx = getContext();
-            const charId = ctx?.characterId;
-            const charEntry = promptOrder.find(p => p.character_id === charId);
-            const defaultEntry = promptOrder.find(p => p.character_id === 'default');
-            activeOrder = (charEntry || defaultEntry)?.order || [];
-        }
-
-        if (activeOrder && activeOrder.length > 0) {
-            // Read from prompt_order (has enabled state + order)
-            for (const item of activeOrder) {
-                if (!item.identifier) continue;
-                const prompt = oai_settings.prompts.find(p => p.identifier === item.identifier);
-                entries.push({
-                    id: item.identifier,
-                    name: prompt?.name || item.identifier,
-                    enabled: item.enabled !== false,
-                    content: prompt?.content || getPromptContent(item.identifier),
-                    isMarker: !!prompt?.marker,
-                });
-            }
-        } else {
-            // Fallback: just read prompts array
-            for (const p of oai_settings.prompts) {
-                if (p.marker) continue;
-                entries.push({
-                    id: p.identifier,
-                    name: p.name || p.identifier,
-                    enabled: true,
-                    content: p.content || '',
-                    isMarker: false,
-                });
-            }
-        }
-    } catch (err) {
-        console.error('[Versus] Failed to read prompt entries:', err);
-    }
-    return entries.filter(e => !e.isMarker);
-}
+// ── Prompt Manager helpers (oai_settings data only, zero DOM) ──
 
 function getPromptEntries() {
-    const entries = [];
+    if (!oai_settings) { console.log('[Versus] oai_settings not available'); return []; }
 
-    // Get enabled states from oai_settings.prompt_order
-    const enabledMap = {};
-    if (oai_settings?.prompt_order) {
-        try {
-            // Get DOM identifiers to find the best matching prompt_order entry
-            const domIds = new Set(
-                Array.from(document.querySelectorAll('[data-pm-identifier]'))
-                    .map(el => el.dataset.pmIdentifier).filter(Boolean)
-            );
+    const prompts = oai_settings.prompts || [];
+    const promptOrder = oai_settings.prompt_order || [];
 
-            // Find the prompt_order entry that best matches current DOM
-            let bestEntry = null;
-            let bestCount = 0;
-            for (const entry of oai_settings.prompt_order) {
-                if (!Array.isArray(entry.order)) continue;
-                const count = entry.order.filter(o => domIds.has(o.identifier)).length;
-                if (count > bestCount) {
-                    bestCount = count;
-                    bestEntry = entry;
-                }
-            }
-
-            if (bestEntry) {
-                console.log(`[Versus] Using prompt_order char_id=${bestEntry.character_id}, items=${bestEntry.order.length}`);
-                bestEntry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
-            }
-        } catch (e) {
-            console.error('[Versus] prompt_order read error:', e);
+    // Find prompt_order entry with most items
+    let bestEntry = null;
+    let bestCount = 0;
+    for (const entry of promptOrder) {
+        if (!Array.isArray(entry.order)) continue;
+        if (entry.order.length > bestCount) {
+            bestCount = entry.order.length;
+            bestEntry = entry;
         }
     }
 
-    document.querySelectorAll('[data-pm-identifier]').forEach(item => {
-        const id = item.dataset.pmIdentifier;
-        if (!id) return;
-        const nameEl = item.querySelector('.completion_prompt_manager_prompt_name')
-            || item.querySelector('.prompt_manager_prompt_name')
-            || item.querySelector('[data-pm-name]');
-        const name = nameEl?.textContent?.trim() || id;
-        const enabled = enabledMap.hasOwnProperty(id) ? enabledMap[id] : true;
-        const content = getPromptContent(id);
-        entries.push({ id, name, enabled, content });
-    });
+    if (!bestEntry) { console.log('[Versus] No prompt_order entry found'); return []; }
+    console.log(`[Versus] Using prompt_order char_id=${bestEntry.character_id}, items=${bestEntry.order.length}`);
+
+    const entries = [];
+    for (const item of bestEntry.order) {
+        if (!item.identifier) continue;
+        const promptDef = prompts.find(p => p.identifier === item.identifier);
+        if (promptDef?.marker) continue;
+
+        entries.push({
+            id: item.identifier,
+            name: promptDef?.name || item.identifier,
+            enabled: item.enabled !== false,
+            content: promptDef?.content || getPromptContent(item.identifier),
+        });
+    }
 
     const disabledCount = entries.filter(e => !e.enabled).length;
     console.log(`[Versus] Loaded ${entries.length} entries, ${disabledCount} disabled`);
     return entries;
 }
 
-function getPromptContent(identifier) {
-    // Try oai_settings.prompts first
-    if (oai_settings?.prompts) {
-        const p = oai_settings.prompts.find(p => p.identifier === identifier);
-        if (p?.content) return p.content;
-    }
-    // Try character card fields
-    try {
-        const ctx = getContext();
-        const char = ctx.characters?.[ctx.characterId];
-        if (char) {
-            const map = {
-                charDescription: char.description,
-                charPersonality: char.personality,
-                scenario: char.scenario,
-                persona: char.persona,
-                mesExamples: char.mes_example,
-            };
-            if (map[identifier]) return map[identifier];
-        }
-    } catch {}
-    return '';
-}
-
 function capturePromptStates() {
     const states = {};
-    document.querySelectorAll('[data-pm-identifier]').forEach(item => {
-        const id = item.dataset.pmIdentifier;
-        const toggle = item.querySelector('input[type="checkbox"]')
-            || item.querySelector('.prompt-toggle')
-            || item.querySelector('input');
-        if (id && toggle) states[id] = toggle.checked;
-    });
+    if (!oai_settings?.prompt_order) return states;
+    for (const entry of oai_settings.prompt_order) {
+        if (!Array.isArray(entry.order)) continue;
+        for (const item of entry.order) {
+            if (item.identifier) states[item.identifier] = item.enabled !== false;
+        }
+    }
     return states;
 }
 
 function applyPromptOverrides(overrides) {
-    if (!overrides) return;
-    for (const [id, enabled] of Object.entries(overrides)) {
-        const item = document.querySelector(`[data-pm-identifier="${id}"]`);
-        if (!item) { console.log(`[Versus] prompt item not found: ${id}`); continue; }
-
-        // Try multiple selectors for the toggle
-        const toggle = item.querySelector('input[type="checkbox"]')
-            || item.querySelector('.prompt-toggle')
-            || item.querySelector('input');
-
-        if (toggle && toggle.checked !== enabled) {
-            toggle.click();
-            console.log(`[Versus] toggled ${id}: ${!enabled} → ${enabled}`);
-        } else if (!toggle) {
-            console.log(`[Versus] no toggle found for ${id}`);
+    if (!overrides || !oai_settings?.prompt_order) return;
+    let count = 0;
+    for (const entry of oai_settings.prompt_order) {
+        if (!Array.isArray(entry.order)) continue;
+        for (const item of entry.order) {
+            if (item.identifier && overrides.hasOwnProperty(item.identifier)) {
+                if (item.enabled !== overrides[item.identifier]) {
+                    item.enabled = overrides[item.identifier];
+                    count++;
+                }
+            }
         }
     }
+    console.log(`[Versus] Applied ${count} prompt overrides`);
 }
 
 function startFetchIntercept() {
@@ -441,7 +355,7 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
         await new Promise(r => setTimeout(r, 1200));
     }
 
-    // Read entries (from DOM + oai_settings.prompt_order)
+    // Read entries from oai_settings (no DOM dependency)
     const entries = getPromptEntries();
 
     // Switch back immediately
