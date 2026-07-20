@@ -331,6 +331,12 @@ function renderSetup() {
         </div>
     `;
     populatePresets();
+    // Restore saved input text
+    const savedInput = getSettings().lastInput;
+    if (savedInput) {
+        const inputEl = panel.querySelector('#vs-input');
+        if (inputEl) inputEl.value = savedInput;
+    }
     panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
     panel.querySelector('#vs-start')?.addEventListener('click', startComparison);
     panel.querySelector('#vs-show-history')?.addEventListener('click', renderHistory);
@@ -345,9 +351,29 @@ function renderSetup() {
             const slotIdx = parseInt(btn.dataset.slot);
             const sel = document.querySelector(`#vs-sel-${slotIdx}`);
             if (!sel?.value) { showToast('먼저 프리셋을 선택해주세요.'); return; }
+            // Save current selections before leaving setup
+            saveCurrentSelections();
             await renderPromptConfig(slotIdx, sel.value, sel.options[sel.selectedIndex]?.text || '');
         });
     });
+}
+
+function saveCurrentSelections() {
+    const settings = getSettings();
+    const slots = [];
+    for (let i = 0; i < slotCount; i++) {
+        const sel = document.querySelector(`#vs-sel-${i}`);
+        const prof = document.querySelector(`#vs-profile-${i}`);
+        slots.push({
+            preset: sel?.value || '',
+            profile: prof?.value || '',
+        });
+    }
+    settings.lastSlots = slots;
+    // Save input text too
+    const inputEl = document.querySelector('#vs-input');
+    if (inputEl) settings.lastInput = inputEl.value;
+    saveSettingsDebounced();
 }
 
 function saveSlotCount() {
@@ -396,7 +422,7 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
         const checked = overrides.hasOwnProperty(e.id) ? overrides[e.id] : e.enabled;
         const isOverridden = overrides.hasOwnProperty(e.id) && overrides[e.id] !== e.enabled;
         const hasContent = e.content && e.content.trim().length > 0;
-        const preview = hasContent ? esc(e.content.trim().slice(0, 200)) + (e.content.length > 200 ? '…' : '') : '';
+        const fullContent = hasContent ? esc(e.content.trim()) : '';
         return `
             <div class="vs-prompt-item ${isOverridden ? 'vs-overridden' : ''}">
                 <label class="vs-prompt-item-top">
@@ -404,7 +430,7 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
                     <span class="vs-prompt-name">${esc(e.name)}</span>
                     ${hasContent ? '<button class="vs-btn-tiny vs-prompt-expand" data-id="' + esc(e.id) + '">▼</button>' : ''}
                 </label>
-                ${hasContent ? '<div class="vs-prompt-preview" id="vs-preview-' + esc(e.id) + '" style="display:none;">' + preview + '</div>' : ''}
+                ${hasContent ? '<div class="vs-prompt-preview" id="vs-preview-' + esc(e.id) + '" style="display:none;">' + fullContent + '</div>' : ''}
             </div>`;
     }).join('');
 
