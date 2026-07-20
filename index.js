@@ -338,8 +338,29 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Read entries from oai_settings directly (no preset switching, instant)
-    const entries = getPromptEntries();
+    const originalPreset = getCurrentPresetValue();
+    const needSwitch = originalPreset !== presetValue;
+    let entries;
+
+    if (needSwitch) {
+        // Block external API calls during preset switch to prevent slow side effects
+        const origFetchRef = window.fetch;
+        window.fetch = function (url, opts) {
+            const u = typeof url === 'string' ? url : url?.url || '';
+            if (u.includes('googleapis.com') || u.includes('openai.com') || u.includes('anthropic.com') || u.includes('embedding') || u.includes('predict')) {
+                return Promise.resolve(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }));
+            }
+            return origFetchRef.call(this, url, opts);
+        };
+
+        await switchPreset(presetValue);
+        entries = getPromptEntries();
+        await switchPreset(originalPreset);
+
+        window.fetch = origFetchRef;
+    } else {
+        entries = getPromptEntries();
+    }
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
