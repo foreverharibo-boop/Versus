@@ -84,6 +84,36 @@ function getPromptEntriesFromSettings() {
 
 function getPromptEntries() {
     const entries = [];
+
+    // Get enabled states from oai_settings.prompt_order (reliable source)
+    const enabledMap = {};
+    if (oai_settings?.prompt_order) {
+        try {
+            const ctx = getContext();
+            const charId = ctx?.characterId;
+            let foundCharSpecific = false;
+            for (const entry of oai_settings.prompt_order) {
+                if (entry.character_id == charId && Array.isArray(entry.order)) {
+                    entry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
+                    foundCharSpecific = true;
+                    break;
+                }
+            }
+            if (!foundCharSpecific) {
+                for (const entry of oai_settings.prompt_order) {
+                    if (entry.character_id === 'default' && Array.isArray(entry.order)) {
+                        entry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
+                        break;
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('[Versus] prompt_order read error:', e);
+        }
+    }
+
+    console.log('[Versus] enabledMap from prompt_order:', enabledMap);
+
     document.querySelectorAll('[data-pm-identifier]').forEach(item => {
         const id = item.dataset.pmIdentifier;
         if (!id) return;
@@ -91,8 +121,7 @@ function getPromptEntries() {
             || item.querySelector('.prompt_manager_prompt_name')
             || item.querySelector('[data-pm-name]');
         const name = nameEl?.textContent?.trim() || id;
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        const enabled = checkbox?.checked ?? true;
+        const enabled = enabledMap.hasOwnProperty(id) ? enabledMap[id] : true;
         const content = getPromptContent(id);
         entries.push({ id, name, enabled, content });
     });
@@ -127,8 +156,10 @@ function capturePromptStates() {
     const states = {};
     document.querySelectorAll('[data-pm-identifier]').forEach(item => {
         const id = item.dataset.pmIdentifier;
-        const checkbox = item?.querySelector('input[type="checkbox"]');
-        if (id && checkbox) states[id] = checkbox.checked;
+        const toggle = item.querySelector('input[type="checkbox"]')
+            || item.querySelector('.prompt-toggle')
+            || item.querySelector('input');
+        if (id && toggle) states[id] = toggle.checked;
     });
     return states;
 }
@@ -137,9 +168,18 @@ function applyPromptOverrides(overrides) {
     if (!overrides) return;
     for (const [id, enabled] of Object.entries(overrides)) {
         const item = document.querySelector(`[data-pm-identifier="${id}"]`);
-        const checkbox = item?.querySelector('input[type="checkbox"]');
-        if (checkbox && checkbox.checked !== enabled) {
-            checkbox.click();
+        if (!item) { console.log(`[Versus] prompt item not found: ${id}`); continue; }
+
+        // Try multiple selectors for the toggle
+        const toggle = item.querySelector('input[type="checkbox"]')
+            || item.querySelector('.prompt-toggle')
+            || item.querySelector('input');
+
+        if (toggle && toggle.checked !== enabled) {
+            toggle.click();
+            console.log(`[Versus] toggled ${id}: ${!enabled} → ${enabled}`);
+        } else if (!toggle) {
+            console.log(`[Versus] no toggle found for ${id}`);
         }
     }
 }
@@ -379,37 +419,9 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Switch to target preset
-    const originalPreset = getCurrentPresetValue();
-    console.log('[Versus] switching from', originalPreset, 'to', presetValue);
-    await switchPreset(presetValue);
-    await new Promise(r => setTimeout(r, 1200));
-
-    // Debug: log oai_settings structure
-    if (oai_settings) {
-        console.log('[Versus] oai_settings.prompts:', JSON.parse(JSON.stringify(oai_settings.prompts || [])));
-        console.log('[Versus] oai_settings.prompt_order:', JSON.parse(JSON.stringify(oai_settings.prompt_order || [])));
-        console.log('[Versus] oai_settings keys:', Object.keys(oai_settings));
-    } else {
-        console.log('[Versus] oai_settings is null');
-    }
-
-    // Debug: log DOM entries
-    const domEntries = getPromptEntries();
-    console.log('[Versus] DOM prompt entries:', domEntries);
-
-    // Try to read from oai_settings
-    let entries = getPromptEntriesFromSettings();
-    console.log('[Versus] Settings prompt entries:', entries);
-
-    // Fallback to DOM if settings returned nothing
-    if (entries.length === 0) {
-        console.log('[Versus] Falling back to DOM entries');
-        entries = domEntries;
-    }
-
-    // Switch back
-    await switchPreset(originalPreset);
+    // Read current prompt entries directly from DOM (no preset switching)
+    const entries = getPromptEntries();
+    console.log('[Versus] Prompt entries loaded:', entries.length, entries.map(e => `${e.name}(${e.enabled})`));
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
