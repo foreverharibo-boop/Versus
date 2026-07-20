@@ -85,34 +85,36 @@ function getPromptEntriesFromSettings() {
 function getPromptEntries() {
     const entries = [];
 
-    // Get enabled states from oai_settings.prompt_order (reliable source)
+    // Get enabled states from oai_settings.prompt_order
     const enabledMap = {};
     if (oai_settings?.prompt_order) {
         try {
-            const ctx = getContext();
-            const charId = ctx?.characterId;
-            let foundCharSpecific = false;
+            // Get DOM identifiers to find the best matching prompt_order entry
+            const domIds = new Set(
+                Array.from(document.querySelectorAll('[data-pm-identifier]'))
+                    .map(el => el.dataset.pmIdentifier).filter(Boolean)
+            );
+
+            // Find the prompt_order entry that best matches current DOM
+            let bestEntry = null;
+            let bestCount = 0;
             for (const entry of oai_settings.prompt_order) {
-                if (entry.character_id == charId && Array.isArray(entry.order)) {
-                    entry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
-                    foundCharSpecific = true;
-                    break;
+                if (!Array.isArray(entry.order)) continue;
+                const count = entry.order.filter(o => domIds.has(o.identifier)).length;
+                if (count > bestCount) {
+                    bestCount = count;
+                    bestEntry = entry;
                 }
             }
-            if (!foundCharSpecific) {
-                for (const entry of oai_settings.prompt_order) {
-                    if (entry.character_id === 'default' && Array.isArray(entry.order)) {
-                        entry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
-                        break;
-                    }
-                }
+
+            if (bestEntry) {
+                console.log(`[Versus] Using prompt_order char_id=${bestEntry.character_id}, items=${bestEntry.order.length}`);
+                bestEntry.order.forEach(o => { enabledMap[o.identifier] = o.enabled !== false; });
             }
         } catch (e) {
             console.error('[Versus] prompt_order read error:', e);
         }
     }
-
-    console.log('[Versus] enabledMap from prompt_order:', enabledMap);
 
     document.querySelectorAll('[data-pm-identifier]').forEach(item => {
         const id = item.dataset.pmIdentifier;
@@ -125,6 +127,9 @@ function getPromptEntries() {
         const content = getPromptContent(id);
         entries.push({ id, name, enabled, content });
     });
+
+    const disabledCount = entries.filter(e => !e.enabled).length;
+    console.log(`[Versus] Loaded ${entries.length} entries, ${disabledCount} disabled`);
     return entries;
 }
 
@@ -419,12 +424,35 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Read current prompt entries directly from DOM (no preset switching)
+    // Show loading
+    panel.innerHTML = `
+        <div class="vs-head"><span class="vs-head-title">${LABELS[slotIdx]} 프롬프트 설정</span><span class="vs-head-close" id="vs-close">✕</span></div>
+        <div class="vs-content"><div class="vs-empty">프롬프트 로딩 중…</div></div>
+    `;
+    panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
+
+    // Switch to target preset to load its prompt config
+    const originalPreset = getCurrentPresetValue();
+    const needSwitch = originalPreset !== presetValue;
+
+    if (needSwitch) {
+        console.log(`[Versus] Switching ${originalPreset} → ${presetValue} to read prompts`);
+        await switchPreset(presetValue);
+        await new Promise(r => setTimeout(r, 1200));
+    }
+
+    // Read entries (from DOM + oai_settings.prompt_order)
     const entries = getPromptEntries();
-    console.log('[Versus] Prompt entries loaded:', entries.length, entries.map(e => `${e.name}(${e.enabled})`));
+
+    // Switch back immediately
+    if (needSwitch) {
+        console.log(`[Versus] Switching back to ${originalPreset}`);
+        await switchPreset(originalPreset);
+    }
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
+        renderSetup();
         return;
     }
 
