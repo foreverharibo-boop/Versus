@@ -490,6 +490,22 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
             }
         });
     });
+
+    // Real-time highlight update when checkbox changes
+    panel.querySelectorAll('.vs-prompt-item input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const id = cb.dataset.pmId;
+            const original = entries.find(e => e.id === id);
+            const item = cb.closest('.vs-prompt-item');
+            if (original && item) {
+                if (cb.checked !== original.enabled) {
+                    item.classList.add('vs-overridden');
+                } else {
+                    item.classList.remove('vs-overridden');
+                }
+            }
+        });
+    });
 }
 
 function renderResult(data) {
