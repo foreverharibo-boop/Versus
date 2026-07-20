@@ -738,11 +738,16 @@ async function startComparison() {
 
             // Apply prompt overrides for this slot
             const savedStates = capturePromptStates();
-            if (slotPromptOverrides[i]) {
-                console.log(`[Versus] Slot ${LABELS[i]} applying overrides:`, slotPromptOverrides[i]);
-                console.log(`[Versus] Saved states before override:`, savedStates);
+            if (slotPromptOverrides[i] && Object.keys(slotPromptOverrides[i]).length > 0) {
+                console.log(`[Versus] Slot ${LABELS[i]} overrides to apply:`, JSON.stringify(slotPromptOverrides[i]));
+                applyPromptOverrides(slotPromptOverrides[i]);
+                // Verify overrides were applied
+                const afterStates = capturePromptStates();
+                for (const [id, val] of Object.entries(slotPromptOverrides[i])) {
+                    const actual = afterStates[id];
+                    console.log(`[Versus]   ${id}: wanted=${val}, actual=${actual}, ${val === actual ? '✓' : '✗ FAILED'}`);
+                }
             }
-            applyPromptOverrides(slotPromptOverrides[i]);
 
             startFetchIntercept();
             const t = performance.now();
