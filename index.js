@@ -322,12 +322,7 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Temporarily switch to the target preset to read its prompt entries
-    const originalPreset = getCurrentPresetValue();
-    await switchPreset(presetValue);
-    await new Promise(r => setTimeout(r, 300));
     const entries = getPromptEntries();
-    await switchPreset(originalPreset);
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
