@@ -103,6 +103,28 @@ function applyPromptOverrides(overrides) {
     console.log(`[Versus] Applied ${count} prompt overrides`);
 }
 
+function getPromptContent(identifier) {
+    if (oai_settings?.prompts) {
+        const p = oai_settings.prompts.find(p => p.identifier === identifier);
+        if (p?.content) return p.content;
+    }
+    try {
+        const ctx = getContext();
+        const char = ctx.characters?.[ctx.characterId];
+        if (char) {
+            const map = {
+                charDescription: char.description,
+                charPersonality: char.personality,
+                scenario: char.scenario,
+                persona: char.persona,
+                mesExamples: char.mes_example,
+            };
+            if (map[identifier]) return map[identifier];
+        }
+    } catch {}
+    return '';
+}
+
 function startFetchIntercept() {
     currentAbort = new AbortController();
     origFetch = window.fetch;
