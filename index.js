@@ -338,35 +338,11 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    // Show loading
-    panel.innerHTML = `
-        <div class="vs-head"><span class="vs-head-title">${LABELS[slotIdx]} 프롬프트 설정</span><span class="vs-head-close" id="vs-close">✕</span></div>
-        <div class="vs-content"><div class="vs-empty">프롬프트 로딩 중…</div></div>
-    `;
-    panel.querySelector('#vs-close')?.addEventListener('click', togglePanel);
-
-    // Switch to target preset to load its prompt config
-    const originalPreset = getCurrentPresetValue();
-    const needSwitch = originalPreset !== presetValue;
-
-    if (needSwitch) {
-        console.log(`[Versus] Switching ${originalPreset} → ${presetValue} to read prompts`);
-        await switchPreset(presetValue);
-        await new Promise(r => setTimeout(r, 1200));
-    }
-
-    // Read entries from oai_settings (no DOM dependency)
+    // Read entries from oai_settings directly (no preset switching, instant)
     const entries = getPromptEntries();
-
-    // Switch back immediately
-    if (needSwitch) {
-        console.log(`[Versus] Switching back to ${originalPreset}`);
-        await switchPreset(originalPreset);
-    }
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
-        renderSetup();
         return;
     }
 
