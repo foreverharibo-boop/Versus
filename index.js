@@ -25,6 +25,55 @@ const slotPromptOverrides = {}; // { 0: { 'main': true, 'jailbreak': false }, ..
 
 // ── Prompt Manager helpers ──
 
+function getPromptEntriesFromSettings() {
+    const entries = [];
+    try {
+        if (!oai_settings?.prompts) return entries;
+        const promptOrder = oai_settings.prompt_order;
+
+        // Get the active prompt order (try character-specific, then default)
+        let activeOrder = null;
+        if (Array.isArray(promptOrder)) {
+            // Some ST versions: prompt_order is array of { character_id, order }
+            const ctx = getContext();
+            const charId = ctx?.characterId;
+            const charEntry = promptOrder.find(p => p.character_id === charId);
+            const defaultEntry = promptOrder.find(p => p.character_id === 'default');
+            activeOrder = (charEntry || defaultEntry)?.order || [];
+        }
+
+        if (activeOrder && activeOrder.length > 0) {
+            // Read from prompt_order (has enabled state + order)
+            for (const item of activeOrder) {
+                if (!item.identifier) continue;
+                const prompt = oai_settings.prompts.find(p => p.identifier === item.identifier);
+                entries.push({
+                    id: item.identifier,
+                    name: prompt?.name || item.identifier,
+                    enabled: item.enabled !== false,
+                    content: prompt?.content || getPromptContent(item.identifier),
+                    isMarker: !!prompt?.marker,
+                });
+            }
+        } else {
+            // Fallback: just read prompts array
+            for (const p of oai_settings.prompts) {
+                if (p.marker) continue;
+                entries.push({
+                    id: p.identifier,
+                    name: p.name || p.identifier,
+                    enabled: true,
+                    content: p.content || '',
+                    isMarker: false,
+                });
+            }
+        }
+    } catch (err) {
+        console.error('[Versus] Failed to read prompt entries:', err);
+    }
+    return entries.filter(e => !e.isMarker);
+}
+
 function getPromptEntries() {
     const entries = [];
     document.querySelectorAll('[data-pm-identifier]').forEach(item => {
@@ -322,7 +371,16 @@ async function renderPromptConfig(slotIdx, presetValue, presetName) {
     const panel = document.querySelector('#vs-panel');
     if (!panel) return;
 
-    const entries = getPromptEntries();
+    // Switch to target preset to load its prompt data into oai_settings
+    const originalPreset = getCurrentPresetValue();
+    await switchPreset(presetValue);
+    await new Promise(r => setTimeout(r, 1000));
+
+    // Read from oai_settings (data, not DOM)
+    const entries = getPromptEntriesFromSettings();
+
+    // Switch back
+    await switchPreset(originalPreset);
 
     if (entries.length === 0) {
         showToast('프롬프트 항목을 찾을 수 없습니다.');
