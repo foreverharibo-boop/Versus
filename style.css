@@ -72,12 +72,23 @@
     max-width: 520px;
 }
 
-/* ── Preset row ── */
-.vs-row {
+/* ── Preset slots ── */
+.vs-slots {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
+}
+@media (max-width: 400px) {
+    .vs-slots {
+        grid-template-columns: 1fr;
+    }
+}
+.vs-slot-controls {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-bottom: 10px;
 }
 .vs-preset-slot {
     display: flex;
@@ -266,7 +277,12 @@
     border-top: none;
     padding-top: 0;
 }
-.vs-translate {
+.vs-card-btns {
+    display: flex;
+    gap: 6px;
+}
+.vs-translate,
+.vs-insert {
     white-space: nowrap;
 }
 
